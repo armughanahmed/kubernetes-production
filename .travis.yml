@@ -1,0 +1,37 @@
+language: generic
+sudo: required
+services:
+  - docker
+
+before_install:
+  - docker build -t armughanahmed/react-test -f ./client/Dockerfile.dev ./client
+
+script:
+  - docker run -e CI=true armughanahmed/react-test npm run test
+
+after_success:
+  - docker build -t armughanahmed/multi-client ./client
+  - docker build -t armughanahmed/multi-nginx ./nginx
+  - docker build -t armughanahmed/multi-server ./server
+  - docker build -t armughanahmed/multi-worker ./worker
+
+  # login to the docker CLI.
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  # take those images and push them to docker hub.
+  - docker push armughanahmed/multi-client
+  - docker push armughanahmed/multi-nginx
+  - docker push armughanahmed/multi-server
+  - docker push armughanahmed/multi-worker
+deploy:
+  provider: elasticbeanstalk
+  region: us-east-1
+  app: multi-docker
+  env: MultiDocker-env
+  bucket_name: elasticbeanstalk-us-east-1-135445298796
+  bucket_path: docker-multi
+  on:
+    branch: main
+  access_key_id: $AWS_ACCESS_KEY
+  secret_access_key: $AWS_SECRET_KEY
+#build by armughanahmed.
+#abc
